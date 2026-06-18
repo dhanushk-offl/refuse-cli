@@ -17,7 +17,7 @@ func realHookCmd() *cobra.Command {
 
 	cmd.AddCommand(&cobra.Command{
 		Use:   "install <agent>",
-		Short: "Install a pre-tool-use hook for an agent (claude-code, ...)",
+		Short: "Install a pre-tool-use hook for an agent (claude-code, codex, ...)",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			a, ok := hook.Get(args[0])

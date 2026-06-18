@@ -126,10 +126,10 @@ The server ingests OSV, CISA KEV, FIRST EPSS, GHSA, deps.dev, and Wolfi; first-b
 | Agent | Status |
 | --- | --- |
 | Claude Code | ✓ supported |
+| Codex CLI | ✓ supported |
 | Cursor | tracked |
 | Continue | tracked |
 | Aider | tracked |
-| Codex CLI | tracked |
 | Cline | tracked |
 
 PRs welcome — see [`internal/hook/claudecode.go`](./internal/hook/claudecode.go) as the reference.
