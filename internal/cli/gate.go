@@ -64,8 +64,9 @@ fail-open with a stderr warning).`,
 			}
 
 			engine := gate.Engine{
-				Client: server.New(cfg.ServerURL, cfg.APIKey),
-				Policy: cfg.Policy,
+				Client:    server.New(cfg.ServerURL, cfg.APIKey),
+				Policy:    cfg.Policy,
+				AgentMode: agent != "",
 			}
 
 			ctx, cancel := context.WithCancel(context.Background())
@@ -89,7 +90,6 @@ fail-open with a stderr warning).`,
 					fmt.Fprintln(os.Stderr, res.Message)
 				}
 			}
-			_ = agent // reserved for v2 per-agent protocols
 			return nil
 		},
 	}

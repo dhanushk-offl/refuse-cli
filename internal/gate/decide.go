@@ -40,8 +40,9 @@ type Result struct {
 
 // Engine carries the deps the gate needs.
 type Engine struct {
-	Client *server.Client
-	Policy config.Policy
+	Client    *server.Client
+	Policy    config.Policy
+	AgentMode bool // true when called from an agent hook; suppresses bypass hints in output
 }
 
 // Decide runs the gate against a parser result.
@@ -90,7 +91,7 @@ func (e Engine) Decide(ctx context.Context, p parsers.ParseResult) Result {
 	if worst >= threshold && worst > 0 {
 		return Result{
 			Decision:     DecisionBlock,
-			Message:      renderBlock(resp),
+			Message:      renderBlock(resp, e.AgentMode),
 			Findings:     resp.Results,
 			BatchSummary: &resp.Summary,
 		}
@@ -127,14 +128,14 @@ func (e Engine) failOpenOrClosed(err error) Result {
 		}
 	}
 	hint := ""
-	if errors.Is(err, server.ErrServerUnreachable) {
-		hint = " (set REFUSE_FAIL_CLOSED=1 to require gate)"
-	} else if errors.Is(err, server.ErrRateLimited) {
-		// Hit only when the server returned a 429 with no parseable body
-		// (older self-hosted versions, upstream 429 from a proxy).
-		hint = " — rate limited, allowing install (upgrade plan to raise the limit)"
-	} else if errors.Is(err, server.ErrUnauthorized) {
-		hint = " — set REFUSE_API_KEY or run `refuse init`"
+	if !e.AgentMode {
+		if errors.Is(err, server.ErrServerUnreachable) {
+			hint = " (set REFUSE_FAIL_CLOSED=1 to require gate)"
+		} else if errors.Is(err, server.ErrRateLimited) {
+			hint = " — rate limited, allowing install (upgrade plan to raise the limit)"
+		} else if errors.Is(err, server.ErrUnauthorized) {
+			hint = " — set REFUSE_API_KEY or run `refuse init`"
+		}
 	}
 	return Result{
 		Decision:    DecisionAllow,
@@ -211,7 +212,7 @@ func pluralize(n int, singular, plural string) string {
 	return plural
 }
 
-func renderBlock(resp server.BatchCheckResponse) string {
+func renderBlock(resp server.BatchCheckResponse, agentMode bool) string {
 	var b strings.Builder
 	b.WriteString("refuse: blocked — vulnerable package(s)\n")
 	for _, r := range resp.Results {
@@ -236,8 +237,10 @@ func renderBlock(resp server.BatchCheckResponse) string {
 			fmt.Fprintf(&b, "    Suggested: %s (%s)%s\n", f.Version, f.Type, breakingTag(f.BreakingChange))
 		}
 	}
-	// Override hint
-	b.WriteString("\nOverride: set REFUSE_ALLOW_VULNERABLE=1 to bypass.\n")
+	// Override hint — hidden from agents so they can't self-bypass
+	if !agentMode {
+		b.WriteString("\nOverride: set REFUSE_ALLOW_VULNERABLE=1 to bypass.\n")
+	}
 	return b.String()
 }
 
